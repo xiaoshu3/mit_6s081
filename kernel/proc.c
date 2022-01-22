@@ -164,6 +164,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  p->mask = 0;
 }
 
 // Create a user page table for a given process,
@@ -245,6 +246,7 @@ userinit(void)
   p->state = RUNNABLE;
 
   release(&p->lock);
+  p->mask = 0;
 }
 
 // Grow or shrink user memory by n bytes.
@@ -300,6 +302,8 @@ fork(void)
     if(p->ofile[i])
       np->ofile[i] = filedup(p->ofile[i]);
   np->cwd = idup(p->cwd);
+
+  np->mask = p->mask;
 
   safestrcpy(np->name, p->name, sizeof(p->name));
 
@@ -653,4 +657,15 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+uint16 count_unused(){
+  uint64 res =0;
+  struct proc *p;
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->state != UNUSED) res++;
+    release(&p->lock);
+  }
+  return res;
 }
