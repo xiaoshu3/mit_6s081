@@ -78,6 +78,30 @@ struct trapframe {
   /* 264 */ uint64 t4;
   /* 272 */ uint64 t5;
   /* 280 */ uint64 t6;
+
+  uint64 tmp_pc;
+  uint64 tmp_ra;
+  uint64 tmp_sp;
+  uint64 tmp_s0;
+  uint64 tmp_s1;
+
+  uint64 tmp_s2;
+  uint64 tmp_s3;
+  uint64 tmp_s4;
+  uint64 tmp_s5;
+  uint64 tmp_s6;
+  uint64 tmp_s7;
+  uint64 tmp_s8;
+  uint64 tmp_s9;
+  uint64 tmp_s10;
+  uint64 tmp_s11;
+
+  uint64 tmp_a0;
+  uint64 tmp_a1;
+  uint64 tmp_a2;
+  uint64 tmp_a5;
+
+
 };
 
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
@@ -105,4 +129,9 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  int ticks;
+  void (*handler)();
+  int time_pass;
+  int stat;
 };

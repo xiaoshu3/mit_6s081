@@ -66,6 +66,37 @@ usertrap(void)
 
     syscall();
   } else if((which_dev = devintr()) != 0){
+    if(which_dev == 2 && p->stat){
+      p->time_pass +=1;
+      if(p->ticks){
+        if(p->time_pass % p->ticks == 0){
+          p->trapframe->tmp_pc = r_sepc();
+          //printf("%p\n",p->trapframe->tmp_pc);
+          p->trapframe->tmp_ra = p->trapframe->ra;
+          p->trapframe->tmp_s0 = p->trapframe ->s0;
+          p->trapframe -> tmp_sp = p->trapframe ->sp;
+          p->trapframe -> tmp_s1 = p->trapframe->s1;
+
+          p->trapframe -> tmp_s2 = p->trapframe->s2;
+          p->trapframe -> tmp_s3 = p->trapframe->s3;
+          p->trapframe -> tmp_s4 = p->trapframe->s4;
+          p->trapframe -> tmp_s5 = p->trapframe->s5;
+          p->trapframe -> tmp_s6 = p->trapframe->s6;
+          p->trapframe -> tmp_s7 = p->trapframe->s7;
+          p->trapframe -> tmp_s8 = p->trapframe->s8;
+          p->trapframe -> tmp_s9 = p->trapframe->s9;
+          p->trapframe -> tmp_s10 = p->trapframe->s10;
+          p->trapframe -> tmp_s11= p->trapframe->s11;
+          
+          p->trapframe->tmp_a0 = p->trapframe->a0;
+          p->trapframe->tmp_a1 = p->trapframe->a1;
+          p->trapframe->tmp_a2 = p->trapframe->a2;
+          p->trapframe->tmp_a5 = p->trapframe->a5;
+          p->stat = 0;  
+          p->trapframe->epc = 0x0;
+        }
+      }
+    }
     // ok
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
@@ -78,8 +109,7 @@ usertrap(void)
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2)
-    yield();
-
+     yield();
   usertrapret();
 }
 
@@ -150,8 +180,38 @@ kerneltrap()
   }
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING)
+  if(which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING){
+    // struct proc *p = myproc();
+    // p->trapframe->epc = r_sepc();
+    // p->time_pass +=1;
+    // if(p->stat && p->ticks && p->time_pass % p->ticks == 0){
+    //   printf("yes\n");
+    //   p->trapframe->tmp_pc = r_sepc();
+    //       p->trapframe->tmp_ra = p->trapframe->ra;
+    //       p->trapframe->tmp_s0 = p->trapframe ->s0;
+    //       p->trapframe -> tmp_sp = p->trapframe ->sp;
+    //       p->trapframe -> tmp_s1 = p->trapframe->s1;
+
+    //       p->trapframe -> tmp_s2 = p->trapframe->s2;
+    //       p->trapframe -> tmp_s3 = p->trapframe->s3;
+    //       p->trapframe -> tmp_s4 = p->trapframe->s4;
+    //       p->trapframe -> tmp_s4 = p->trapframe->s4;
+    //       p->trapframe -> tmp_s4 = p->trapframe->s4;
+    //       p->trapframe -> tmp_s5 = p->trapframe->s5;
+    //       p->trapframe -> tmp_s6 = p->trapframe->s6;
+    //       p->trapframe -> tmp_s7 = p->trapframe->s7;
+    //       p->trapframe -> tmp_s8 = p->trapframe->s8;
+    //       p->trapframe -> tmp_s9 = p->trapframe->s9;
+    //       p->trapframe -> tmp_s10 = p->trapframe->s10;
+    //       p->trapframe -> tmp_s11= p->trapframe->s11;
+
+    //       p->stat = 0;
+    //       p->trapframe->epc = 0x0;
+    // }
     yield();
+  }
+
+    
 
   // the yield() may have caused some traps to occur,
   // so restore trap registers for use by kernelvec.S's sepc instruction.
@@ -211,7 +271,6 @@ devintr()
     // acknowledge the software interrupt by clearing
     // the SSIP bit in sip.
     w_sip(r_sip() & ~2);
-
     return 2;
   } else {
     return 0;

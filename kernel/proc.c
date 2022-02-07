@@ -141,6 +141,11 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  p->time_pass = 0;
+  p->handler = 0;
+  p->ticks = 0;
+  p->stat = 0;
+
   return p;
 }
 
