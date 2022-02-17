@@ -7,6 +7,7 @@
 #include "defs.h"
 
 struct spinlock tickslock;
+struct spinlock cowlock;
 uint ticks;
 
 extern char trampoline[], uservec[], userret[];
@@ -16,10 +17,63 @@ void kernelvec();
 
 extern int devintr();
 
+int handle_cow(pagetable_t pagetable,uint64 va){
+  struct proc *p = myproc();
+  pte_t *pte;
+  uint64 pa;
+  uint flags;
+  char *mem;
+  int n;
+
+  if(va >= p->sz || va >= MAXVA){
+    myproc()->killed =1;
+    return -1;
+  }
+  if((pte = walk(pagetable, va, 0)) == 0)
+      return -1;
+  if((*pte & PTE_V) == 0)
+      return -1;
+  if(!(*pte & PTE_C)) return -1;
+
+  pa = PTE2PA(*pte);
+  flags = PTE_FLAGS(*pte);
+
+  push_off();
+
+  n = num_map(pa);
+  if(n == 1){
+    *pte |= PTE_W;
+    *pte &= ~PTE_C;
+    goto ok;
+  }
+  else if(n > 1){
+    if((mem = kalloc()) == 0) goto bad;
+    memmove(mem, (char*)pa, PGSIZE);
+    flags |= PTE_W;
+    flags &= ~PTE_C;
+    if(mappages(pagetable, va, PGSIZE, (uint64)mem, flags ) != 0){
+      kfree(mem);
+      goto bad;
+    }
+    kfree((void*)pa);
+    goto ok;
+  }
+  else goto bad;
+
+  ok:
+    pop_off();
+    return 0;
+  bad:
+    pop_off();
+    return -1;
+
+
+}
 void
 trapinit(void)
 {
   initlock(&tickslock, "time");
+  initlock(&cowlock, "cow");
 }
 
 // set up to take exceptions and traps while in the kernel.
@@ -67,7 +121,15 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else {
+  } 
+  else  if(r_scause() == 15){
+    acquire(&cowlock);
+    if(handle_cow(p->pagetable,r_stval()) < 0){
+      p->killed = 1;
+    }
+    release(&cowlock);
+  }
+  else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;
