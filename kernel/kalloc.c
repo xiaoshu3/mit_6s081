@@ -57,14 +57,14 @@ freerange(void *pa_start, void *pa_end)
 void
 kfree(void *pa)
 { 
-  acquire(&kmem.lock);
+  
   struct run *r;
 
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
 
   // Fill with junk to catch dangling refs.
-
+  acquire(&kmem.lock);
   int n = kmem.mem_map[MAP_NR((uint64)pa)];
   if(n == 1){
     memset(pa, 1, PGSIZE);
@@ -76,7 +76,7 @@ kfree(void *pa)
     kmem.mem_map[MAP_NR((uint64)pa)] = 0;
   }
   else if(n > 1){
-    kmem.mem_map[MAP_NR((uint64)pa)]--;
+    --kmem.mem_map[MAP_NR((uint64)pa)];
   }
   else{
     printf("trying to free free page %p\n",pa);
@@ -120,6 +120,6 @@ int num_map(uint64 pa){
 
 void add_map(uint64 pa){
   acquire(&kmem.lock);
-  kmem.mem_map[MAP_NR(pa)]++;
+  ++kmem.mem_map[MAP_NR(pa)];
   release(&kmem.lock);
 }

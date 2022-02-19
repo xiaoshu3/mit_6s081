@@ -23,7 +23,6 @@ int handle_cow(pagetable_t pagetable,uint64 va){
   uint64 pa;
   uint flags;
   char *mem;
-  int n;
 
   if(va >= p->sz || va >= MAXVA){
     myproc()->killed =1;
@@ -38,35 +37,37 @@ int handle_cow(pagetable_t pagetable,uint64 va){
   pa = PTE2PA(*pte);
   flags = PTE_FLAGS(*pte);
 
-  push_off();
-
-  n = num_map(pa);
-  if(n == 1){
-    *pte |= PTE_W;
-    *pte &= ~PTE_C;
-    goto ok;
-  }
-  else if(n > 1){
-    if((mem = kalloc()) == 0) goto bad;
-    memmove(mem, (char*)pa, PGSIZE);
-    flags |= PTE_W;
-    flags &= ~PTE_C;
-    if(mappages(pagetable, va, PGSIZE, (uint64)mem, flags ) != 0){
-      kfree(mem);
-      goto bad;
-    }
-    kfree((void*)pa);
-    goto ok;
-  }
-  else goto bad;
-
-  ok:
-    pop_off();
-    return 0;
-  bad:
-    pop_off();
+  if((mem = kalloc()) == 0) return -1;
+  memmove(mem, (char*)pa, PGSIZE);
+  flags |= PTE_W;
+  flags &= ~PTE_C;
+  if(mappages(pagetable, PGROUNDDOWN(va), PGSIZE, (uint64)mem, flags ) != 0){
+    kfree(mem);
     return -1;
+  }
+  kfree((void*)pa);
+  return 0;
 
+
+  // n = num_map(pa);
+  // if(n == 1){
+  //   *pte |= PTE_W;
+  //   *pte &= ~PTE_C;
+  //  return 0;
+  // }
+  // else if(n > 1){
+  //   if((mem = kalloc()) == 0) return -1;
+  //   memmove(mem, (char*)pa, PGSIZE);
+  //   flags |= PTE_W;
+  //   flags &= ~PTE_C;
+  //   if(mappages(pagetable, va, PGSIZE, (uint64)mem, flags ) != 0){
+  //     kfree(mem);
+  //     return -1;
+  //   }
+  //   kfree((void*)pa);
+  //  return 0;
+  // }
+  // else return -1;
 
 }
 void
