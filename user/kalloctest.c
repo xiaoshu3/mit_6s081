@@ -68,6 +68,7 @@ void test1(void)
   }
   printf("test1 results:\n");
   n = ntas(1);
+  //printf("n %d  m %d\n",n,m);
   if(n-m < 10) 
     printf("test1 OK\n");
   else

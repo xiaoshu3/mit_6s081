@@ -7,6 +7,10 @@ struct buf {
   uint refcnt;
   struct buf *prev; // LRU cache list
   struct buf *next;
+
+  struct buf *prev_hash;
+  struct buf *next_hash;
+  uint num;
   uchar data[BSIZE];
 };
 
