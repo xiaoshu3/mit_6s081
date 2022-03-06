@@ -30,7 +30,8 @@ OBJS = \
   $K/sysfile.o \
   $K/kernelvec.o \
   $K/plic.o \
-  $K/virtio_disk.o
+  $K/virtio_disk.o \
+  $K/mmap.o
 
 OBJS_KCSAN = \
   $K/start.o \
@@ -216,6 +217,11 @@ endif
 ifeq ($(LAB),thread)
 UPROGS += \
 	$U/_uthread
+endif
+
+ifeq ($(LAB),mmap)
+UPROGS += \
+	$U/_mmaptest
 
 $U/uthread_switch.o : $U/uthread_switch.S
 	$(CC) $(CFLAGS) -c -o $U/uthread_switch.o $U/uthread_switch.S

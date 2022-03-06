@@ -8,6 +8,7 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct vm_area_struct;
 
 // bio.c
 void            binit(void);
@@ -105,6 +106,11 @@ int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 
+// mmap.c
+void vminit();
+void vm_struct_init(struct vm_area_struct*);
+void handle_share(struct vm_area_struct* t);
+
 // swtch.S
 void            swtch(struct context*, struct context*);
 
@@ -170,6 +176,8 @@ uint64          walkaddr(pagetable_t, uint64);
 int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
+pte_t *
+walk(pagetable_t pagetable, uint64 va, int alloc);
 
 // plic.c
 void            plicinit(void);

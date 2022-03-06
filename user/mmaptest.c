@@ -111,6 +111,8 @@ mmap_test(void)
   // offset in the file.
   //
   char *p = mmap(0, PGSIZE*2, PROT_READ, MAP_PRIVATE, fd, 0);
+  //printf("p: %p\n",p);
+
   if (p == MAP_FAILED)
     err("mmap (1)");
   _v1(p);
@@ -122,7 +124,9 @@ mmap_test(void)
   printf("test mmap private\n");
   // should be able to map file opened read-only with private writable
   // mapping
-  p = mmap(0, PGSIZE*2, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+  p = mmap(0, PGSIZE*2, (PROT_READ | PROT_WRITE), MAP_PRIVATE, fd, 0);
+    //printf("p: %p\n",p);
+
   if (p == MAP_FAILED)
     err("mmap (2)");
   if (close(fd) == -1)
@@ -289,6 +293,7 @@ fork_test(void)
   }
 
   // check that the parent's mappings are still there.
+  //printf("check that the parent's mappings are still there\n");
   _v1(p1);
   _v1(p2);
 

@@ -241,6 +241,7 @@ userinit(void)
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
+  p->mmap =  (void*)0;
 
   p->state = RUNNABLE;
 
@@ -304,6 +305,14 @@ fork(void)
   safestrcpy(np->name, p->name, sizeof(p->name));
 
   pid = np->pid;
+  np->mmap = p->mmap;
+
+  struct vm_area_struct *tmp = np->mmap;
+  if(tmp) tmp->shared +=1;
+  while(tmp){
+    tmp->f = filedup(tmp->f);
+    tmp = tmp->next;
+  }
 
   release(&np->lock);
 
@@ -353,6 +362,20 @@ exit(int status)
     }
   }
 
+  while(p->mmap){
+    struct vm_area_struct* tmp = p->mmap;
+    //uint n  = (tmp->vm_end - tmp->vm_start)>>12;
+    uint64 va = tmp->vm_start;
+    while(va < tmp->vm_end){
+      pte_t *pte = walk(p->pagetable, PGROUNDDOWN(va), 0);
+      if(*pte & PTE_V)
+        uvmunmap(p->pagetable,PGROUNDDOWN(va),1,1);
+      va+=PGSIZE;
+    }
+    fileclose(tmp->f);
+    p->mmap = tmp->next;
+    vm_struct_init(tmp);
+  }
   begin_op();
   iput(p->cwd);
   end_op();

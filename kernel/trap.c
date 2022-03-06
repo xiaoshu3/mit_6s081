@@ -3,8 +3,11 @@
 #include "memlayout.h"
 #include "riscv.h"
 #include "spinlock.h"
+#include "sleeplock.h"
+#include "fs.h"
 #include "proc.h"
 #include "defs.h"
+#include "file.h"
 
 struct spinlock tickslock;
 uint ticks;
@@ -15,6 +18,32 @@ extern char trampoline[], uservec[], userret[];
 void kernelvec();
 
 extern int devintr();
+
+int handle_mmap(pagetable_t pagetable,uint64 va,struct vm_area_struct* vm){
+  //struct proc *p = myproc();
+  handle_share(myproc()->mmap);
+  uint64 ka = (uint64) kalloc();
+  if(ka == 0){
+    return -1;
+  }
+  memset((void*)ka,0,PGSIZE);
+  va = PGROUNDDOWN(va);
+  if(mappages(pagetable,va,PGSIZE,ka,vm->prot | PTE_U) !=0){
+    kfree((void*)ka);
+    return -1;
+  }
+
+  int r = 0;
+  
+  ilock(vm->f->ip);
+    if((r = readi(vm->f->ip, 1, va, vm->offset + (va - vm->vm_start), PGSIZE)) > 0){
+      //printf("YYYYY\n");
+      //vm->offset += r;
+    }
+  iunlock(vm->f->ip);
+  return 0;
+
+}
 
 void
 trapinit(void)
@@ -67,7 +96,20 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else {
+  }
+  else if(r_scause() == 13 || r_scause() == 15){
+    uint64 addr = r_stval();
+    struct vm_area_struct* tmp = p->mmap;
+    while(tmp){
+      if(tmp->vm_start <= addr && addr < tmp->vm_end) goto find;
+      tmp = tmp->next;
+    }
+    goto bad;
+    find:
+      if(handle_mmap(p->pagetable,addr,tmp) <0) goto bad;
+  }
+  else {
+  bad:
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;
